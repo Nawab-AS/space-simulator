@@ -25,13 +25,15 @@ const pos = (val) => 1 / normalZoom * val; // normalized position
 
 
 
+let objectType = ["Star", "Planet", "Dwarf Planet", "Dwarf Star", "Black Hole"];
 function setup() {
     createCanvas(1, 1);
     windowResized();
-    textAlign(CENTER);
+    textAlign(CENTER, CENTER);
     frameRate(60);
     initializeStars(300);
     initializeSliders();
+    objectType = new Select(objectType, 0, canvasSize.width - 200, 200);
 }
 
 function draw() {
@@ -73,6 +75,12 @@ function mouseReleased() {
             return;
         }
     });
+
+    // selection
+    if (objectType.mouseReleased()) {
+        mouseJustReleased = false;
+        return;
+    }
 
     
     setTimeout(() => {
@@ -128,7 +136,7 @@ function drawSidebar() {
     rect(canvasSize.width - 50, 15, 60, 30, 10);
     fill(0);
     textSize(30);
-    text("≡", canvasSize.width - 32.5, 37.5);
+    text("≡", canvasSize.width - 50, 12.5, 30, 30);
     if (openButtonHovered && mouseJustReleased) {
         sidebar.targetPos = 1;
     }
@@ -140,14 +148,14 @@ function drawSidebar() {
     rect(sidebarPos, 0, 200, canvasSize.height);
     fill(255);
     textSize(15);
-    text("Sidebar", sidebarPos + 100, 30);
+    text("Properties", sidebarPos + 100, 27.5);
 
 
     // Sidebar for when no celestial objects exist or none is selected
     if (celestialObjects.length === 0 || currentObject == null) {
         textSize(12);
         if (celestialObjects.length === 0) { text("No celestial objects created", sidebarPos + 10, 60, 180) }
-        else if (currentObject == null) {  text("Select a celestial object to view details", sidebarPos + 10, 60, 180) }
+        else if (currentObject == null) {  text("Select a celestial object to view details", sidebarPos + 10, 70, 180) }
 
         // create button
         const createButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > 95 && mouse.Y < 95 + 30;
@@ -156,7 +164,7 @@ function drawSidebar() {
         textSize(13);
         fill(0);
         if (createButtonHovered) fill(255);
-        text("Create a celestial object", sidebarPos + 20, 90 + 30/2, 160);
+        text("Create a celestial object", sidebarPos + 10, 95, 180, 30);
 
         if (createButtonHovered && mouseJustReleased) {
             creatingObject = true;
@@ -167,27 +175,29 @@ function drawSidebar() {
     } else { // object selected
         const obj = celestialObjects.find(o => o.id === currentObject);
         textSize(12);
-        text("Type: " + obj.name, sidebarPos + 100, 80);
 
         // sliders
-        sliders.mass.draw(sidebarPos + 10, 110);
+        sliders.mass.draw(sidebarPos + 20, 130);
         obj.mass = sliders.mass.value;
 
-        sliders.radius.draw(sidebarPos + 10, 155);
+        sliders.radius.draw(sidebarPos + 20, 175);
         obj.radius = sliders.radius.value;
 
         fill(200);
-        text(`Mass: ${obj.mass} M☉`, sidebarPos + 100, 135);
-        text(`Radius: ${obj.radius} R☉`, sidebarPos + 100, 180);
+        text(`Mass: ${obj.mass} M☉`, sidebarPos + 100, 155);
+        text(`Radius: ${obj.radius} R☉`, sidebarPos + 100, 200);
+        
+        text("Type", sidebarPos + 100, 80);
+        objectType.draw(sidebarPos + 30, 90);
 
         // delete button
-        const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > 210 && mouse.Y < 210 + 30;
+        const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > canvasSize.height - 75 && mouse.Y < canvasSize.height - 75 + 30;
         fill(200, 70, 70);
-        rect(sidebarPos + 10, 210, 180, 30, 7);
+        rect(sidebarPos + 10, canvasSize.height - 75, 180, 30, 7);
         textSize(13);
         fill(0);
         if (deleteButtonHovered) fill(255);
-        text("Delete", sidebarPos + 20, 205 + 30/2, 160);
+        text("Delete", sidebarPos + 10, canvasSize.height - 75, 180, 30);
         if (deleteButtonHovered && mouseJustReleased) {
             celestialObjects = celestialObjects.filter(o => o.id !== currentObject);
             currentObject = null;
@@ -207,7 +217,7 @@ function drawSidebar() {
     rect(sidebarPos + 15, 15, 25, 25, 5);
     fill(255);
     if (buttonHovered) fill(0);
-    text("X", sidebarPos + 15 + 25/2, 20 + 25/2);
+    text("X", sidebarPos + 15, 15, 25, 25);
     if (buttonHovered && mouseJustReleased) {
         sidebar.targetPos = 0;
     }

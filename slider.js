@@ -6,9 +6,7 @@ class Slider {
         this.max = max;
         this.value = value;
 
-        this.hidden = false;
-
-        // consts (mostly)
+        // consts
         this.width = 160;
         this.height = 8;
         this.dragging = false;
@@ -21,12 +19,11 @@ class Slider {
     }
 
     draw(x=null, y=null) {
-        if (this.hidden) return;
         if (x !== null) this.x = x;
         if (y !== null) this.y = y;
         if (this.dragging) {
-            const mouseXClamped = constrain(mouse.X, this.x, this.x + this.width);
-            this.value = map(mouseXClamped, this.x, this.x + this.width, this.min, this.max);
+            this.value = constrain(mouse.X, this.x, this.x + this.width);
+            this.value = map(this.value, this.x, this.x + this.width, this.min, this.max);
             this.value = Math.round(this.value * (10**this.decimalPlaces)) / (10**this.decimalPlaces); // round to 2 decimal places
         }
         const knobX = map(this.value, this.min, this.max, this.x, this.x + this.width);
@@ -45,7 +42,6 @@ class Slider {
     }
 
     mousePressed() {
-        if (this.hidden) return;
         if (dist(mouse.X, mouse.Y, map(this.value, this.min, this.max, this.x, this.x + this.width), this.y + this.height / 2) < this.knobRadius) {
             this.dragging = true;
         }

@@ -18,7 +18,10 @@ p {
     color: #888888;
     position: absolute;
     bottom: 5px;
-    font-family: Arial, sans-serif;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 2vh;
+
     color: #aaaaaa;
 }
 
