@@ -1,5 +1,8 @@
 const canvasSize = { width: 900, height: 600 };
 let sidebar = { pos: 1, targetPos: 1 };
+let celestialObjects = [];
+let currentObject = null;
+let creatingObject = false;
 
 let normalZoom;
 let mouse = { X: 0, Y: 0 };
@@ -27,14 +30,21 @@ function setup() {
     windowResized();
     textAlign(CENTER);
     frameRate(60);
+    initializeStars(300);
 }
 
 function draw() {
     scale(normalZoom);
     mouse = { X: pos(mouseX), Y: pos(mouseY) };
 
-    background(0);
-    rect(mouse.X, mouse.Y, 50, 50);
+    background(15);
+    drawBGStars(1/10);
+    if (mouseJustReleased) reselectObject();
+    drawObjects();
+    // rect(mouse.X-5, mouse.Y-5, 10, 10);
+    if (creatingObject){
+        previewObject(mouse.X, mouse.Y);
+    }
     drawSidebar();
 }
 
@@ -43,20 +53,51 @@ function mouseReleased() {
     if (mouseJustReleased) return;
     mouseJustReleased = true;
 
+    if (creatingObject) {
+        createObject();
+        creatingObject = false;
+        mouseJustReleased = false;
+        return;
+    }
+
     
     setTimeout(() => {
         mouseJustReleased = false;
     }, 1000/getFrameRate() * 0.9); // Reset after 0.9 frames
 }
-// function mousePressed() {
-//     console.log(mouse.X, mouse.Y);
-// }
 
+let stars;
+function initializeStars(numStars) {
+    stars = [];
+    for (let i = 0; i < numStars; i++) {
+        stars.push([
+            Math.random() * canvasSize.width,
+            Math.random() * canvasSize.height,
+            Math.random() * 3
+        ]);
+    }
+}
+    
+function drawBGStars(update=1/20) {
+    fill(255);
+    for (let i = 0; i < stars.length; i++) {
+        if (Math.random() < update) {
+            stars[i][0] = stars[i][0] + Math.random() - 0.5;
+            stars[i][1] = stars[i][1] + Math.random() - 0.5;
+            stars[i][2] = constrain(stars[i][2] + (Math.random() - 0.5)*0.5, 0.05, 3);
+
+            // Wrap around
+            stars[i][0] = (stars[i][0] + canvasSize.width) % canvasSize.width;
+            stars[i][1] = (stars[i][1] + canvasSize.height) % canvasSize.height;
+        }
+        square(stars[i][0], stars[i][1], stars[i][2]);
+    }
+}
 
 function drawSidebar() {
     if (sidebar.pos !== sidebar.targetPos){
-        sidebar.pos = lerp(sidebar.pos, sidebar.targetPos, 0.2);
-        if (Math.abs(sidebar.pos - sidebar.targetPos) < 0.05) sidebar.pos = sidebar.targetPos;
+        sidebar.pos = lerp(sidebar.pos, sidebar.targetPos, 0.25);
+        if (Math.abs(sidebar.pos - sidebar.targetPos) < 0.01) sidebar.pos = sidebar.targetPos;
     }
 
     // Open Sidebar Button
@@ -65,7 +106,7 @@ function drawSidebar() {
     if (openButtonHovered) fill(128);
     rect(canvasSize.width - 50, 15, 60, 30, 10);
     fill(0);
-    textSize(25);
+    textSize(30);
     text("≡", canvasSize.width - 32.5, 37.5);
     if (openButtonHovered && mouseJustReleased) {
         sidebar.targetPos = 1;
@@ -81,14 +122,94 @@ function drawSidebar() {
     text("Sidebar", sidebarPos + 100, 30);
 
 
+    // Sidebar for when no celestial objects exist or none is selected
+    if (celestialObjects.length === 0 || currentObject == null) {
+        textSize(12);
+        if (celestialObjects.length === 0) { text("No celestial objects created", sidebarPos + 10, 60, 180) }
+        else if (currentObject == null) {  text("Select a celestial object to view details", sidebarPos + 10, 60, 180) }
+
+        // create button
+        const createButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > 95 && mouse.Y < 95 + 30;
+        fill(100, 200, 100);
+        rect(sidebarPos + 10, 95, 180, 30, 7);
+        textSize(13);
+        fill(0);
+        if (createButtonHovered) fill(255);
+        text("Create a celestial object", sidebarPos + 20, 90 + 30/2, 160);
+
+        if (createButtonHovered && mouseJustReleased) {
+            creatingObject = true;
+            sidebar.targetPos = 0;
+        }
+
+
+    } else { // object selected
+        const obj = celestialObjects.find(o => o.id === currentObject);
+        textSize(12);
+        text("Name: " + obj.name, sidebarPos + 10, 60, 180);
+        text("Mass: " + obj.mass, sidebarPos + 10, 80, 180);
+        text("Radius: " + obj.radius, sidebarPos + 10, 100, 180);
+    }
+
+
     // Close button
     const buttonHovered = mouse.X > sidebarPos + 15 && mouse.X < sidebarPos + 15 + 25 && mouse.Y > 15 && mouse.Y < 15 + 25;
     fill(170, 20, 20);
-    rect(sidebarPos + 15, 15, 25, 25);
+    rect(sidebarPos + 15, 15, 25, 25, 5);
     fill(255);
     if (buttonHovered) fill(0);
     text("X", sidebarPos + 15 + 25/2, 20 + 25/2);
     if (buttonHovered && mouseJustReleased) {
         sidebar.targetPos = 0;
     }
+}
+
+let objCounter = 0;
+function createObject() {
+    celestialObjects.push({
+        id: objCounter++,
+        name: "Celestial Object #" + objCounter,
+        position: { x: mouse.X, y: mouse.Y },
+        mass: 1000,
+        radius: 10
+    });
+    currentObject = objCounter - 1;
+
+    sidebar.targetPos = 1;
+}
+
+
+function drawObjects() {
+    push();
+    fill(200, 200, 0);
+    stroke(250, 200, 0);
+    for (let obj of celestialObjects) {
+        if (obj.id === currentObject) {
+            strokeWeight(2);
+        } else {
+            strokeWeight(0);
+        }
+        circle(obj.position.x, obj.position.y, obj.radius * 2);
+    }
+    pop();
+}
+
+function previewObject(x, y) {
+    fill(200, 200, 0, 150);
+    circle(x, y, 20);
+    
+    textSize(17);
+    fill(255);
+    text("Click anywhere to place a planet/star", canvasSize.width/2, 20);
+}
+
+function reselectObject() {
+    for (let obj of celestialObjects) {
+        if (dist(mouse.X, mouse.Y, obj.position.x, obj.position.y) <= obj.radius) {
+            currentObject = obj.id;
+            sidebar.targetPos = 1;
+            return;
+        }
+    }
+    currentObject = null;
 }
