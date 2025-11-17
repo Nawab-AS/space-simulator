@@ -31,6 +31,7 @@ function setup() {
     textAlign(CENTER);
     frameRate(60);
     initializeStars(300);
+    initializeSliders();
 }
 
 function draw() {
@@ -39,13 +40,18 @@ function draw() {
 
     background(15);
     drawBGStars(1/10);
-    if (mouseJustReleased) reselectObject();
     drawObjects();
     // rect(mouse.X-5, mouse.Y-5, 10, 10);
     if (creatingObject){
         previewObject(mouse.X, mouse.Y);
     }
     drawSidebar();
+    reselectObject();
+}
+
+function mousePressed() {
+    // sliders
+    Object.entries(sliders).forEach(([_, slider]) => {slider.mousePressed()});
 }
 
 let mouseJustReleased = false;
@@ -59,6 +65,14 @@ function mouseReleased() {
         mouseJustReleased = false;
         return;
     }
+
+    // sliders
+    Object.entries(sliders).forEach(([_, slider]) => {
+        if (slider.mouseReleased()) {
+            mouseJustReleased = false;
+            return;
+        }
+    });
 
     
     setTimeout(() => {
@@ -94,10 +108,17 @@ function drawBGStars(update=1/20) {
     }
 }
 
+let sliders = {};
+function initializeSliders() {
+    sliders.mass = new Slider(canvasSize.width - 180, 200, 0.1, 50, 50);
+    sliders.radius = new Slider(canvasSize.width - 180, 250, 5, 50, 20);
+}
+
 function drawSidebar() {
     if (sidebar.pos !== sidebar.targetPos){
         sidebar.pos = lerp(sidebar.pos, sidebar.targetPos, 0.25);
         if (Math.abs(sidebar.pos - sidebar.targetPos) < 0.01) sidebar.pos = sidebar.targetPos;
+        if (sidebar.pos == 0) currentObject = null;
     }
 
     // Open Sidebar Button
@@ -146,11 +167,39 @@ function drawSidebar() {
     } else { // object selected
         const obj = celestialObjects.find(o => o.id === currentObject);
         textSize(12);
-        text("Name: " + obj.name, sidebarPos + 10, 60, 180);
-        text("Mass: " + obj.mass, sidebarPos + 10, 80, 180);
-        text("Radius: " + obj.radius, sidebarPos + 10, 100, 180);
-    }
+        text("Type: " + obj.name, sidebarPos + 100, 80);
 
+        // sliders
+        sliders.mass.draw(sidebarPos + 10, 110);
+        obj.mass = sliders.mass.value;
+
+        sliders.radius.draw(sidebarPos + 10, 155);
+        obj.radius = sliders.radius.value;
+
+        fill(200);
+        text(`Mass: ${obj.mass} M☉`, sidebarPos + 100, 135);
+        text(`Radius: ${obj.radius} R☉`, sidebarPos + 100, 180);
+
+        // delete button
+        const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > 210 && mouse.Y < 210 + 30;
+        fill(200, 70, 70);
+        rect(sidebarPos + 10, 210, 180, 30, 7);
+        textSize(13);
+        fill(0);
+        if (deleteButtonHovered) fill(255);
+        text("Delete", sidebarPos + 20, 205 + 30/2, 160);
+        if (deleteButtonHovered && mouseJustReleased) {
+            celestialObjects = celestialObjects.filter(o => o.id !== currentObject);
+            currentObject = null;
+            mouseJustReleased = false;
+        }
+
+        // what is M☉
+        textSize(10);
+        fill(200);
+        text("M☉ = Solar Mass (1.989 x 10^30 kg)", sidebarPos + 100, canvasSize.height - 30);
+        text("R☉ = Solar Radius (6.963 x 10^5 km)", sidebarPos + 100, canvasSize.height - 15);
+    }
 
     // Close button
     const buttonHovered = mouse.X > sidebarPos + 15 && mouse.X < sidebarPos + 15 + 25 && mouse.Y > 15 && mouse.Y < 15 + 25;
@@ -162,17 +211,22 @@ function drawSidebar() {
     if (buttonHovered && mouseJustReleased) {
         sidebar.targetPos = 0;
     }
+
+    if (mouse.X > sidebarPos) mouseJustReleased = false;
 }
 
 let objCounter = 0;
 function createObject() {
-    celestialObjects.push({
+    const defaultObj = {
         id: objCounter++,
         name: "Celestial Object #" + objCounter,
         position: { x: mouse.X, y: mouse.Y },
-        mass: 1000,
+        mass: 30,
         radius: 10
-    });
+    };
+    sliders.mass.value = defaultObj.mass;
+    sliders.radius.value = defaultObj.radius;
+    celestialObjects.push(defaultObj);
     currentObject = objCounter - 1;
 
     sidebar.targetPos = 1;
@@ -204,8 +258,11 @@ function previewObject(x, y) {
 }
 
 function reselectObject() {
+    if (!mouseJustReleased) return;
     for (let obj of celestialObjects) {
         if (dist(mouse.X, mouse.Y, obj.position.x, obj.position.y) <= obj.radius) {
+            sliders.mass.value = obj.mass;
+            sliders.radius.value = obj.radius;
             currentObject = obj.id;
             sidebar.targetPos = 1;
             return;

@@ -8,6 +8,21 @@ body, html {
 body {
     background-color: #222222;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+p {
+    margin: 0px;
+    color: #888888;
+    position: absolute;
+    bottom: 5px;
+    font-family: Arial, sans-serif;
+    color: #aaaaaa;
+}
+
+p a {
+    color: #00a236;
+    text-decoration: none;
 }
