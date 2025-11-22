@@ -4,6 +4,8 @@ let sidebar = { pos: 1, targetPos: 1 };
 let celestialObjects = [];
 let currentObject = null;
 let creatingObject = false;
+let G = 0.1; // gravity constant
+
 
 let normalZoom;
 let mouse = { X: 0, Y: 0 };
@@ -40,7 +42,7 @@ function draw() {
 
     background(15);
     drawBGStars(1/20);
-    simulateObjects();
+    if (simulate) simulateObjects();
     drawObjects();
     if (creatingObject){
         previewObject(mouse.X, mouse.Y);
@@ -115,10 +117,13 @@ function drawBGStars(update=1/20) {
 }
 
 let sliders = {};
+let timeScale = 1;
 function initializeSliders() {
     const format = objectTypes[Object.keys(objectTypes)[0]];
     sliders.mass = new Slider(canvasSize.width - 180, 200, format.mass.min, format.mass.max);
     sliders.radius = new Slider(canvasSize.width - 180, 250, format.radius.min, format.radius.max);
+    sliders.time = new Slider(canvasSize.width - 180, 300, 1, 100);
+    sliders.time.value = 1;
 }
 
 function drawSidebar() {
@@ -149,6 +154,18 @@ function drawSidebar() {
     textSize(15);
     text("Properties", sidebarPos + 100, 27.5);
 
+    // Time slider: always visible if there are at least 2 objects and simulation is enabled
+    if (celestialObjects.length >= 2 && simulate) {
+        textSize(13);
+        fill(220);
+        text("Time Scale", sidebarPos + 100, 340);
+        sliders.time.draw(sidebarPos + 20, 350);
+        timeScale = sliders.time.value;
+        textSize(11);
+        fill(180);
+        text(`x${timeScale}`, sidebarPos + 100, 370);
+    }
+
 
     // Sidebar for when no celestial objects exist or none is selected
     if (celestialObjects.length === 0 || currentObject == null) {
@@ -169,6 +186,27 @@ function drawSidebar() {
             creatingObject = true;
             mouseJustReleased = false;
             sidebar.targetPos = 0;
+        }
+
+        // Simulation toggle button (visible even when no object selected)
+        const simButtonY = 135;
+        const simButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > simButtonY && mouse.Y < simButtonY + 30;
+        const canToggleSim = celestialObjects.length >= 2;
+        if (canToggleSim) fill(simulate ? 200 : 100, 200, 100);
+        else fill(120);
+        rect(sidebarPos + 10, simButtonY, 180, 30, 7);
+        textSize(13);
+        fill(0);
+        if (!canToggleSim) fill(180);
+        if (simButtonHovered && mouseJustReleased && canToggleSim) {
+            simulate = !simulate;
+            mouseJustReleased = false;
+        }
+        text(simulate ? "Pause Simulation" : "Start Simulation", sidebarPos + 10, simButtonY, 180, 30);
+        if (!canToggleSim) {
+            textSize(10);
+            fill(200);
+            text("Need at least 2 objects", sidebarPos + 100, simButtonY + 45);
         }
 
 
@@ -202,7 +240,29 @@ function drawSidebar() {
         if (deleteButtonHovered && mouseJustReleased) {
             celestialObjects = celestialObjects.filter(o => o.id !== currentObject);
             currentObject = null;
+            if (celestialObjects.length < 2) simulate = false;
             mouseJustReleased = false;
+        }
+
+        // Simulation toggle button (also visible when an object is selected)
+        const simButtonY2 = canvasSize.height - 140;
+        const simButtonHovered2 = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > simButtonY2 && mouse.Y < simButtonY2 + 30;
+        const canToggleSim2 = celestialObjects.length >= 2;
+        if (canToggleSim2) fill(simulate ? 200 : 100, 200, 100);
+        else fill(120);
+        rect(sidebarPos + 10, simButtonY2, 180, 30, 7);
+        textSize(13);
+        fill(0);
+        if (!canToggleSim2) fill(180);
+        if (simButtonHovered2 && mouseJustReleased && canToggleSim2) {
+            simulate = !simulate;
+            mouseJustReleased = false;
+        }
+        text(simulate ? "Pause Simulation" : "Start Simulation", sidebarPos + 10, simButtonY2, 180, 30);
+        if (!canToggleSim2) {
+            textSize(10);
+            fill(200);
+            text("Need at least 2 objects", sidebarPos + 100, simButtonY2 + 45);
         }
 
         // what is M☉
@@ -229,17 +289,16 @@ function drawSidebar() {
 
 let objCounter = 0;
 function createObject() {
-    const format = objectTypes["Star"];
     const defaultObj = {
         id: objCounter++,
         position: { x: mouse.X, y: mouse.Y },
         mass: 30,
-        radius: 10,
+        radius: 0.5,
         type: 0,
     };
     sliders.mass.value = defaultObj.mass;
     sliders.radius.value = defaultObj.radius;
-    objectType.selection = defaultObj.selection;
+    objectType.selected = defaultObj.type || 0;
     celestialObjects.push(defaultObj);
     currentObject = objCounter - 1;
 
@@ -260,7 +319,11 @@ function drawObjects() {
     }
 
     if (currentObject != null) {
-        const obj = celestialObjects[currentObject];
+        const obj = celestialObjects.find(o => o.id === currentObject);
+        if (typeof obj === 'undefined') {
+            pop();
+            return;
+        }
         if (obj.type == 0) { // star
             fill(200, 200, 0);
             stroke(250, 250, 0);
@@ -277,7 +340,7 @@ function drawObjects() {
 function previewObject(x, y) {
     fill(200, 50, 0, 150);
     if (mouse.X > 5 && mouse.X < canvasSize.width - 205 && mouse.Y > 5 && mouse.Y < canvasSize.height - 5) fill(200, 200, 0, 150);
-    circle(x, y, 3.5*objectScale);
+    circle(x, y, objectScale);
     
     textSize(17);
     fill(255);
@@ -311,6 +374,33 @@ function onTypeChange(option) {
     sliders.mass.decimalPlaces = Math.max(decimalPlaces(format.mass.min), decimalPlaces(format.mass.max));
 }
 
-function simulateObjects() {
+let simulate = false;
 
+function simulateObjects() {
+    const old = celestialObjects.map(o => ({ id: o.id, position: { x: o.position.x, y: o.position.y }, mass: o.mass }));
+    const velocities = old.map(() => ({ x: 0, y: 0 }));
+
+    // Compute accelerations for each object due to every other object
+    for (let i = 0; i < old.length; i++) {
+        const A = old[i];
+        for (let j = 0; j < old.length; j++) {
+            if (i === j) continue;
+            const B = old[j];
+            const dx = B.position.x - A.position.x;
+            const dy = B.position.y - A.position.y;
+            let r = Math.sqrt(dx * dx + dy * dy);
+            const minR = 1;
+            if (r < minR) r = minR;
+
+            const aMag = (G * B.mass) / (r * r);
+            velocities[i].x += aMag * (dx / r);
+            velocities[i].y += aMag * (dy / r);
+        }
+    }
+        let dt = (typeof deltaTime !== 'undefined' && deltaTime > 0) ? (deltaTime / (1000/30)) : 1;
+        dt *= timeScale**2;
+        for (let i = 0; i < celestialObjects.length; i++) {
+            celestialObjects[i].position.x += min(velocities[i].x, 0) * dt;
+            celestialObjects[i].position.y += min(velocities[i].y, 0) * dt;
+    }
 }
