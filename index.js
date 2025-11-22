@@ -30,7 +30,7 @@ function setup() {
     textAlign(CENTER, CENTER);
     frameRate(60);
     objectType = new Select(Object.keys(objectTypes), onTypeChange, canvasSize.width - 200, 200);
-    initializeStars(300);
+    initializeStars(500);
     initializeSliders();
 }
 
@@ -39,9 +39,8 @@ function draw() {
     mouse = { X: pos(mouseX), Y: pos(mouseY) };
 
     background(15);
-    drawBGStars(1/10);
+    drawBGStars(1/20);
     drawObjects();
-    // rect(mouse.X-5, mouse.Y-5, 10, 10);
     if (creatingObject){
         previewObject(mouse.X, mouse.Y);
     }
@@ -102,8 +101,8 @@ function drawBGStars(update=1/20) {
     fill(255);
     for (let i = 0; i < stars.length; i++) {
         if (Math.random() < update) {
-            stars[i][0] = stars[i][0] + Math.random() - 0.5;
-            stars[i][1] = stars[i][1] + Math.random() - 0.5;
+            stars[i][0] = stars[i][0] + Math.random()*1.5 - 0.75;
+            stars[i][1] = stars[i][1] + Math.random()*1.5 - 0.75;
             stars[i][2] = constrain(stars[i][2] + (Math.random() - 0.5)*0.5, 0.05, 3);
 
             // Wrap around
@@ -119,6 +118,7 @@ function initializeSliders() {
     const format = objectTypes[Object.keys(objectTypes)[0]];
     sliders.mass = new Slider(canvasSize.width - 180, 200, format.mass.min, format.mass.max);
     sliders.radius = new Slider(canvasSize.width - 180, 250, format.radius.min, format.radius.max);
+    sliders.luminosity = new Slider(canvasSize.width - 180, 300, format.luminosity.min, format.luminosity.max);
 }
 
 function drawSidebar() {
@@ -182,6 +182,12 @@ function drawSidebar() {
 
         sliders.radius.draw(sidebarPos + 20, 175);
         obj.radius = sliders.radius.value;
+        if (objectType.options[obj.selected] === "Star") {
+            sliders.luminosity.draw(sidebarPos + 20, 220);
+            obj.luminosity = sliders.luminosity.value;
+            fill(200);
+            text(`Luminosity: ${obj.luminosity} L☉`, sidebarPos + 100, 245);
+        }
 
         fill(200);
         text(`Mass: ${obj.mass} M☉`, sidebarPos + 100, 155);
@@ -192,13 +198,13 @@ function drawSidebar() {
         obj.selected = objectType.selected;
 
         // delete button
-        const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > canvasSize.height - 75 && mouse.Y < canvasSize.height - 75 + 30;
+        const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > canvasSize.height - 90 && mouse.Y < canvasSize.height - 90 + 30;
         fill(200, 70, 70);
-        rect(sidebarPos + 10, canvasSize.height - 75, 180, 30, 7);
+        rect(sidebarPos + 10, canvasSize.height - 90, 180, 30, 7);
         textSize(13);
         fill(0);
         if (deleteButtonHovered) fill(255);
-        text("Delete", sidebarPos + 10, canvasSize.height - 75, 180, 30);
+        text("Delete", sidebarPos + 10, canvasSize.height - 90, 180, 30);
         if (deleteButtonHovered && mouseJustReleased) {
             celestialObjects = celestialObjects.filter(o => o.id !== currentObject);
             currentObject = null;
@@ -208,8 +214,9 @@ function drawSidebar() {
         // what is M☉
         textSize(10);
         fill(200);
-        text("M☉ = Solar Mass (1.989 x 10^30 kg)", sidebarPos + 100, canvasSize.height - 30);
-        text("R☉ = Solar Radius (6.963 x 10^5 km)", sidebarPos + 100, canvasSize.height - 15);
+        text("M☉ = Solar Mass (1.989 x 10^30 kg)", sidebarPos + 100, canvasSize.height - 45);
+        text("R☉ = Solar Radius (6.963 x 10^5 km)", sidebarPos + 100, canvasSize.height - 30);
+        text("L☉ = Solar Radius (3.828 x 10^26 W)", sidebarPos + 100, canvasSize.height - 15);
     }
 
     // Close button
@@ -228,16 +235,18 @@ function drawSidebar() {
 
 let objCounter = 0;
 function createObject() {
+    const format = objectTypes["Star"];
     const defaultObj = {
         id: objCounter++,
-        name: "Celestial Object #" + objCounter,
         position: { x: mouse.X, y: mouse.Y },
         mass: 30,
         radius: 10,
         type: 0,
+        luminosity: 0.8,
     };
     sliders.mass.value = defaultObj.mass;
     sliders.radius.value = defaultObj.radius;
+    sliders.luminosity.value = defaultObj.luminosity;
     objectType.selection = defaultObj.selection;
     celestialObjects.push(defaultObj);
     currentObject = objCounter - 1;
@@ -264,7 +273,7 @@ function drawObjects() {
 function previewObject(x, y) {
     fill(200, 50, 0, 150);
     if (mouse.X > 5 && mouse.X < canvasSize.width - 205 && mouse.Y > 5 && mouse.Y < canvasSize.height - 5) fill(200, 200, 0, 150);
-    circle(x, y, 20);
+    circle(x, y, 3.5*objectScale);
     
     textSize(17);
     fill(255);
@@ -274,7 +283,7 @@ function previewObject(x, y) {
 function reselectObject() {
     if (!mouseJustReleased) return;
     for (let obj of celestialObjects) {
-        if (dist(mouse.X, mouse.Y, obj.position.x, obj.position.y) <= obj.radius) {
+        if (dist(mouse.X, mouse.Y, obj.position.x, obj.position.y) <= obj.radius * objectScale) {
             sliders.mass.value = obj.mass;
             sliders.radius.value = obj.radius;
             objectType.selected = obj.selected;
@@ -296,4 +305,11 @@ function onTypeChange(option) {
     sliders.mass.min = format.mass.min;
     sliders.mass.max = format.mass.max;
     sliders.mass.decimalPlaces = Math.max(decimalPlaces(format.mass.min), decimalPlaces(format.mass.max));
+
+    if (format.luminosity) {
+        sliders.luminosity.min = format.luminosity.min;
+        sliders.luminosity.max = format.luminosity.max;
+        sliders.luminosity.decimalPlaces = Math.max(decimalPlaces(format.luminosity.min), decimalPlaces(format.luminosity.max));
+        sliders.luminosity.value = constrain(sliders.luminosity.value, format.luminosity.min, format.luminosity.max);
+    }
 }
