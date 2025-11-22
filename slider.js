@@ -1,17 +1,17 @@
 class Slider {
-    constructor(x, y, min, max, value) {
+    constructor(x, y, min, max) {
         this.x = x;
         this.y = y;
         this.min = min;
         this.max = max;
-        this.value = value;
+        this.value = (min + max)/2;
 
         // consts
         this.width = 160;
         this.height = 8;
         this.dragging = false;
         this.knobRadius = 6;
-        this.decimalPlaces = Math.max(decimalPlaces(min), decimalPlaces(max), decimalPlaces(value));
+        this.decimalPlaces = Math.max(decimalPlaces(min), decimalPlaces(max), decimalPlaces(this.value));
 
         this.selectedColor = color(50, 100, 200);
         this.bgColor = color(200);
@@ -26,6 +26,7 @@ class Slider {
             this.value = map(this.value, this.x, this.x + this.width, this.min, this.max);
             this.value = Math.round(this.value * (10**this.decimalPlaces)) / (10**this.decimalPlaces); // round to 2 decimal places
         }
+        this.value = constrain(this.value, this.min, this.max);
         const knobX = map(this.value, this.min, this.max, this.x, this.x + this.width);
 
         // background

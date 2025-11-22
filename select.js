@@ -1,10 +1,11 @@
 class Select {
-    constructor(options, defaultOption=0, x, y) {
+    constructor(options, onChange, x, y) {
         if (!Array.isArray(options) || options.length === 0) {
             throw new Error("Options must be a non-empty array");
         }
         this.options = options;
-        this.selected = defaultOption;
+        this.selected = 0;
+        this.onChange = onChange;
         this.x = x;
         this.y = y;
         this.open = false;
@@ -58,7 +59,9 @@ class Select {
             this.open = false;
             if (mouse.X > this.x && mouse.X < this.x + this.width && mouse.Y > this.y && mouse.Y < this.y + this.height) return true;
 
-            this.selected = Math.floor((mouse.Y - this.y - this.height) / this.height);
+            const remainingOptions = this.options.filter((_, index) => index !== this.selected);
+            this.selected = this.options.indexOf(remainingOptions[Math.floor((mouse.Y - this.y - this.height) / this.height)]);
+            this.onChange(this.options[this.selected]);
             return true;
         } else {
             if (mouse.X > this.x && mouse.X < this.x + this.width && mouse.Y > this.y && mouse.Y < this.y + this.height) {

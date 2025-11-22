@@ -1,4 +1,5 @@
-const canvasSize = { width: 900, height: 600 };
+const canvasSize = { width: 1067, height: 600 };
+const objectScale = 100;
 let sidebar = { pos: 1, targetPos: 1 };
 let celestialObjects = [];
 let currentObject = null;
@@ -23,17 +24,14 @@ function windowResized() {
 const pos = (val) => 1 / normalZoom * val; // normalized position
 
 
-
-
-let objectType = ["Star", "Planet", "Dwarf Planet", "Dwarf Star", "Black Hole"];
 function setup() {
     createCanvas(1, 1);
     windowResized();
     textAlign(CENTER, CENTER);
     frameRate(60);
+    objectType = new Select(Object.keys(objectTypes), onTypeChange, canvasSize.width - 200, 200);
     initializeStars(300);
     initializeSliders();
-    objectType = new Select(objectType, 0, canvasSize.width - 200, 200);
 }
 
 function draw() {
@@ -61,7 +59,7 @@ function mouseReleased() {
     if (mouseJustReleased) return;
     mouseJustReleased = true;
 
-    if (creatingObject) {
+    if (creatingObject && mouse.X > 5 && mouse.X < canvasSize.width - 205 && mouse.Y > 5 && mouse.Y < canvasSize.height - 5) {
         createObject();
         creatingObject = false;
         mouseJustReleased = false;
@@ -76,7 +74,7 @@ function mouseReleased() {
         }
     });
 
-    // selection
+    // object type select
     if (objectType.mouseReleased()) {
         mouseJustReleased = false;
         return;
@@ -85,7 +83,7 @@ function mouseReleased() {
     
     setTimeout(() => {
         mouseJustReleased = false;
-    }, 1000/getFrameRate() * 0.9); // Reset after 0.9 frames
+    }, 1000/getFrameRate() * 1.2);
 }
 
 let stars;
@@ -118,8 +116,9 @@ function drawBGStars(update=1/20) {
 
 let sliders = {};
 function initializeSliders() {
-    sliders.mass = new Slider(canvasSize.width - 180, 200, 0.1, 50, 50);
-    sliders.radius = new Slider(canvasSize.width - 180, 250, 5, 50, 20);
+    const format = objectTypes[Object.keys(objectTypes)[0]];
+    sliders.mass = new Slider(canvasSize.width - 180, 200, format.mass.min, format.mass.max);
+    sliders.radius = new Slider(canvasSize.width - 180, 250, format.radius.min, format.radius.max);
 }
 
 function drawSidebar() {
@@ -168,6 +167,7 @@ function drawSidebar() {
 
         if (createButtonHovered && mouseJustReleased) {
             creatingObject = true;
+            mouseJustReleased = false;
             sidebar.targetPos = 0;
         }
 
@@ -189,6 +189,7 @@ function drawSidebar() {
         
         text("Type", sidebarPos + 100, 80);
         objectType.draw(sidebarPos + 30, 90);
+        obj.selected = objectType.selected;
 
         // delete button
         const deleteButtonHovered = mouse.X > sidebarPos + 10 && mouse.X < sidebarPos + 10 + 180 && mouse.Y > canvasSize.height - 75 && mouse.Y < canvasSize.height - 75 + 30;
@@ -222,7 +223,7 @@ function drawSidebar() {
         sidebar.targetPos = 0;
     }
 
-    if (mouse.X > sidebarPos) mouseJustReleased = false;
+    if (mouse.X > sidebarPos && sidebar.targetPos == 1) mouseJustReleased = false;
 }
 
 let objCounter = 0;
@@ -232,10 +233,12 @@ function createObject() {
         name: "Celestial Object #" + objCounter,
         position: { x: mouse.X, y: mouse.Y },
         mass: 30,
-        radius: 10
+        radius: 10,
+        type: 0,
     };
     sliders.mass.value = defaultObj.mass;
     sliders.radius.value = defaultObj.radius;
+    objectType.selection = defaultObj.selection;
     celestialObjects.push(defaultObj);
     currentObject = objCounter - 1;
 
@@ -253,13 +256,14 @@ function drawObjects() {
         } else {
             strokeWeight(0);
         }
-        circle(obj.position.x, obj.position.y, obj.radius * 2);
+        circle(obj.position.x, obj.position.y, obj.radius * 2 * objectScale);
     }
     pop();
 }
 
 function previewObject(x, y) {
-    fill(200, 200, 0, 150);
+    fill(200, 50, 0, 150);
+    if (mouse.X > 5 && mouse.X < canvasSize.width - 205 && mouse.Y > 5 && mouse.Y < canvasSize.height - 5) fill(200, 200, 0, 150);
     circle(x, y, 20);
     
     textSize(17);
@@ -273,10 +277,23 @@ function reselectObject() {
         if (dist(mouse.X, mouse.Y, obj.position.x, obj.position.y) <= obj.radius) {
             sliders.mass.value = obj.mass;
             sliders.radius.value = obj.radius;
+            objectType.selected = obj.selected;
             currentObject = obj.id;
             sidebar.targetPos = 1;
             return;
         }
     }
     currentObject = null;
+}
+
+function onTypeChange(option) {
+    const format = objectTypes[option];
+
+    sliders.radius.min = format.radius.min;
+    sliders.radius.max = format.radius.max;
+    sliders.radius.decimalPlaces = Math.max(decimalPlaces(format.radius.min), decimalPlaces(format.radius.max));
+
+    sliders.mass.min = format.mass.min;
+    sliders.mass.max = format.mass.max;
+    sliders.mass.decimalPlaces = Math.max(decimalPlaces(format.mass.min), decimalPlaces(format.mass.max));
 }
