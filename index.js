@@ -40,6 +40,7 @@ function draw() {
 
     background(15);
     drawBGStars(1/20);
+    simulateObjects();
     drawObjects();
     if (creatingObject){
         previewObject(mouse.X, mouse.Y);
@@ -74,7 +75,7 @@ function mouseReleased() {
     });
 
     // object type select
-    if (objectType.mouseReleased()) {
+    if (objectType.mouseReleased() && currentObject && currentObject.type == 0) {
         mouseJustReleased = false;
         return;
     }
@@ -118,7 +119,6 @@ function initializeSliders() {
     const format = objectTypes[Object.keys(objectTypes)[0]];
     sliders.mass = new Slider(canvasSize.width - 180, 200, format.mass.min, format.mass.max);
     sliders.radius = new Slider(canvasSize.width - 180, 250, format.radius.min, format.radius.max);
-    sliders.luminosity = new Slider(canvasSize.width - 180, 300, format.luminosity.min, format.luminosity.max);
 }
 
 function drawSidebar() {
@@ -182,12 +182,6 @@ function drawSidebar() {
 
         sliders.radius.draw(sidebarPos + 20, 175);
         obj.radius = sliders.radius.value;
-        if (objectType.options[obj.selected] === "Star") {
-            sliders.luminosity.draw(sidebarPos + 20, 220);
-            obj.luminosity = sliders.luminosity.value;
-            fill(200);
-            text(`Luminosity: ${obj.luminosity} L☉`, sidebarPos + 100, 245);
-        }
 
         fill(200);
         text(`Mass: ${obj.mass} M☉`, sidebarPos + 100, 155);
@@ -242,11 +236,9 @@ function createObject() {
         mass: 30,
         radius: 10,
         type: 0,
-        luminosity: 0.8,
     };
     sliders.mass.value = defaultObj.mass;
     sliders.radius.value = defaultObj.radius;
-    sliders.luminosity.value = defaultObj.luminosity;
     objectType.selection = defaultObj.selection;
     celestialObjects.push(defaultObj);
     currentObject = objCounter - 1;
@@ -257,14 +249,26 @@ function createObject() {
 
 function drawObjects() {
     push();
-    fill(200, 200, 0);
-    stroke(250, 200, 0);
-    for (let obj of celestialObjects) {
-        if (obj.id === currentObject) {
-            strokeWeight(2);
-        } else {
-            strokeWeight(0);
+    strokeWeight(0);
+    for (const obj of celestialObjects) {
+        if (obj.type == 0) { // star
+            fill(200, 200, 0);
+        } else { // planet
+            fill(50, 200, 150);
         }
+        circle(obj.position.x, obj.position.y, obj.radius * 2 * objectScale);
+    }
+
+    if (currentObject != null) {
+        const obj = celestialObjects[currentObject];
+        if (obj.type == 0) { // star
+            fill(200, 200, 0);
+            stroke(250, 250, 0);
+        } else { // planet
+            fill(50, 200, 150);
+            stroke(75, 250, 175);
+        }
+        strokeWeight(2);
         circle(obj.position.x, obj.position.y, obj.radius * 2 * objectScale);
     }
     pop();
@@ -305,11 +309,8 @@ function onTypeChange(option) {
     sliders.mass.min = format.mass.min;
     sliders.mass.max = format.mass.max;
     sliders.mass.decimalPlaces = Math.max(decimalPlaces(format.mass.min), decimalPlaces(format.mass.max));
+}
 
-    if (format.luminosity) {
-        sliders.luminosity.min = format.luminosity.min;
-        sliders.luminosity.max = format.luminosity.max;
-        sliders.luminosity.decimalPlaces = Math.max(decimalPlaces(format.luminosity.min), decimalPlaces(format.luminosity.max));
-        sliders.luminosity.value = constrain(sliders.luminosity.value, format.luminosity.min, format.luminosity.max);
-    }
+function simulateObjects() {
+
 }
