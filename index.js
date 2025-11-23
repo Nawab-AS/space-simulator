@@ -311,10 +311,10 @@ function drawObjects() {
     push();
     strokeWeight(0);
     for (const obj of celestialObjects) {
-        if (obj.type == 0) { // star
+        if (obj.selected == 0) { // star
             fill(200, 200, 0);
         } else { // planet
-            fill(50, 200, 150);
+            fill(139, 69, 19);
         }
         circle(obj.position.x, obj.position.y, obj.radius * 2 * objectScale);
     }
@@ -325,12 +325,12 @@ function drawObjects() {
             pop();
             return;
         }
-        if (obj.type == 0) { // star
+        if (obj.selected == 0) { // star
             fill(200, 200, 0);
             stroke(250, 250, 0);
         } else { // planet
-            fill(50, 200, 150);
-            stroke(75, 250, 175);
+            fill(139, 69, 19);
+            stroke(97, 48, 13);
         }
         strokeWeight(2);
         circle(obj.position.x, obj.position.y, obj.radius * 2 * objectScale);
