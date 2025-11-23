@@ -292,6 +292,7 @@ function createObject() {
     const defaultObj = {
         id: objCounter++,
         position: { x: mouse.X, y: mouse.Y },
+        velocity: { x: 0, y: 0 },
         mass: 30,
         radius: 0.5,
         type: 0,
@@ -378,7 +379,7 @@ let simulate = false;
 
 function simulateObjects() {
     const old = celestialObjects.map(o => ({ id: o.id, position: { x: o.position.x, y: o.position.y }, mass: o.mass }));
-    const velocities = old.map(() => ({ x: 0, y: 0 }));
+    const velocities = old.map((_, i) => ({ x: celestialObjects[i].velocity.x, y: celestialObjects[i].velocity.y }));
 
     // Compute accelerations for each object due to every other object
     for (let i = 0; i < old.length; i++) {
@@ -397,10 +398,79 @@ function simulateObjects() {
             velocities[i].y += aMag * (dy / r);
         }
     }
-        let dt = (typeof deltaTime !== 'undefined' && deltaTime > 0) ? (deltaTime / (1000/30)) : 1;
-        dt *= timeScale**2;
-        for (let i = 0; i < celestialObjects.length; i++) {
-            celestialObjects[i].position.x += min(velocities[i].x, 0) * dt;
-            celestialObjects[i].position.y += min(velocities[i].y, 0) * dt;
+    let dt = (typeof deltaTime !== 'undefined' && deltaTime > 0) ? (deltaTime / (1000/30)) : 1;
+    dt *= timeScale;
+    for (let i = 0; i < celestialObjects.length; i++) {
+        celestialObjects[i].position.x += velocities[i].x * dt;
+        celestialObjects[i].position.y += velocities[i].y * dt;
+        celestialObjects[i].velocity.x = velocities[i].x;
+        celestialObjects[i].velocity.y = velocities[i].y;
+    }
+    
+    // Check for collisions and merge objects
+    checkAndMergeCollisions();
+}
+
+function checkAndMergeCollisions() {
+    for (let i = 0; i < celestialObjects.length; i++) {
+        for (let j = i + 1; j < celestialObjects.length; j++) {
+            const obj1 = celestialObjects[i];
+            const obj2 = celestialObjects[j];
+            const dx = obj2.position.x - obj1.position.x;
+            const dy = obj2.position.y - obj1.position.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = (obj1.radius + obj2.radius) * objectScale;
+            
+            if (dist < minDist) {
+                // Collision detected - merge objects
+                mergeObjects(i, j);
+                // Restart collision check since array was modified
+                checkAndMergeCollisions();
+                return;
+            }
+        }
+    }
+}
+
+function mergeObjects(index1, index2) {
+    const obj1 = celestialObjects[index1];
+    const obj2 = celestialObjects[index2];
+    
+    // Keep the more massive object, merge into it
+    let keeper, absorbed;
+    if (obj1.mass >= obj2.mass) {
+        keeper = obj1;
+        absorbed = obj2;
+    } else {
+        keeper = obj2;
+        absorbed = obj1;
+        // Swap indices
+        const temp = index1;
+        index1 = index2;
+        index2 = temp;
+    }
+    
+    // Merge properties: combine mass and recalculate radius
+    keeper.mass += absorbed.mass;
+    // Assume density stays constant, so volume adds up: V = (4/3)πr³
+    // r_new = ∛(r1³ + r2³)
+    keeper.radius = Math.cbrt(Math.pow(keeper.radius, 3) + Math.pow(absorbed.radius, 3));
+    
+    // Update velocity to be weighted average
+    const totalMass = keeper.mass;
+    keeper.velocity.x = (keeper.velocity.x * (keeper.mass - absorbed.mass) + absorbed.velocity.x * absorbed.mass) / totalMass;
+    keeper.velocity.y = (keeper.velocity.y * (keeper.mass - absorbed.mass) + absorbed.velocity.y * absorbed.mass) / totalMass;
+    
+    // Remove the absorbed object
+    celestialObjects.splice(index2, 1);
+    
+    // Update currentObject if needed
+    if (currentObject === absorbed.id) {
+        currentObject = keeper.id;
+    }
+    
+    // Pause simulation if less than 2 objects remain
+    if (celestialObjects.length < 2) {
+        simulate = false;
     }
 }
